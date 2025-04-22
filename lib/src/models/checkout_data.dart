@@ -148,7 +148,6 @@ class WompiWebCheckoutData {
         'shipping-address:region': shippingAddressInfo!.region,
         'shipping-address:city': shippingAddressInfo!.city,
         'shipping-address:phone-number': shippingAddressInfo!.phoneNumber,
-
         if (shippingAddressInfo!.addressLine2 != null)
           'shipping-address:address-line-2': shippingAddressInfo!.addressLine2!,
         if (shippingAddressInfo!.name != null)

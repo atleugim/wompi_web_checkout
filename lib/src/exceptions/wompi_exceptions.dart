@@ -17,9 +17,9 @@ class WompiInvalidArgumentException extends WompiException {
   /// Creates a new [WompiInvalidArgumentException] instance with the given
   /// argument name and optional description
   WompiInvalidArgumentException(this.argument, {this.description})
-    : super(
-        '''Invalid argument $argument${description != null ? ': $description' : ''}''',
-      );
+      : super(
+          '''Invalid argument $argument${description != null ? ': $description' : ''}''',
+        );
 
   /// The name of the argument that caused the error
   final String argument;
@@ -33,12 +33,12 @@ class WompiInvalidArgumentException extends WompiException {
 class WompiInvalidSignatureIntegrityArgumentsException extends WompiException {
   /// Creates a new [WompiInvalidSignatureIntegrityArgumentsException] instance
   WompiInvalidSignatureIntegrityArgumentsException()
-    : super('Invalid signature integrity arguments');
+      : super('Invalid signature integrity arguments');
 }
 
 /// Error thrown when an invalid signature integrity is created
 class WompiInvalidSignatureIntegrityException extends WompiException {
   /// Creates a new [WompiInvalidSignatureIntegrityException] instance
   WompiInvalidSignatureIntegrityException()
-    : super('Invalid signature integrity');
+      : super('Invalid signature integrity');
 }
