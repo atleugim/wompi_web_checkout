@@ -1,7 +1,8 @@
 name: wompi_web_checkout
 description: "A Dart package for Wompi's web checkout."
 version: 1.0.0
-homepage:
+homepage: https://github.com/atleugim/wompi_web_checkout
+repository: https://github.com/atleugim/wompi_web_checkout.git
 
 environment:
   sdk: ">=2.17.0 <4.0.0"
