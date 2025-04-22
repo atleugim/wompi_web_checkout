@@ -1,5 +1,7 @@
 # Wompi Web Checkout
 
+![Pub Version](https://img.shields.io/pub/v/wompi_web_checkout) ![Pub Publisher](https://img.shields.io/pub/publisher/wompi_web_checkout)
+
 A Dart package that provides a seamless integration with Wompi's web checkout system, allowing you to easily implement payment processing in your Flutter applications.
 
 - 🔒 Secure payment processing with Wompi
