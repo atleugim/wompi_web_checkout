@@ -19,7 +19,7 @@ Add the package to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  wompi_web_checkout: ^1.0.0
+  wompi_web_checkout: ^<latest_version>
 ```
 
 Then run:
@@ -62,7 +62,7 @@ flutter pub get
     ```dart
     final paymentData = WompiWebCheckoutData(
       // ... basic payment data
-      customerInfo: const WompiWebCheckoutCustomerInfo(
+      customerInfo: WompiWebCheckoutCustomerInfo(
         email: 'customer@example.com',
         fullName: 'John Doe',
         phoneNumber: '3991111111',
@@ -78,7 +78,7 @@ flutter pub get
     final paymentData = WompiWebCheckoutData(
       // ... basic payment data
       // ... customer info
-      shippingAddressInfo: const WompiWebCheckoutShippingAddressInfo(
+      shippingAddressInfo: WompiWebCheckoutShippingAddressInfo(
         addressLine1: 'Calle 100 # 100-100',
         country: 'CO',
         region: 'Antioquia',

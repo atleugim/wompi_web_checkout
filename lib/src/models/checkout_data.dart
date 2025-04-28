@@ -1,4 +1,7 @@
-import 'package:wompi_web_checkout/wompi_web_checkout.dart';
+// ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'package:wompi_web_checkout/src/exceptions/wompi_exceptions.dart';
+import 'package:wompi_web_checkout/src/models/customer_data.dart';
+import 'package:wompi_web_checkout/src/models/shipping_address.dart';
 
 /// Payment data for Wompi checkout
 class WompiWebCheckoutData {
@@ -158,6 +161,28 @@ class WompiWebCheckoutData {
     }
 
     return params;
+  }
+
+  /// Creates a copy of this [WompiWebCheckoutData] with the given fields
+  /// replaced with the new values.
+  WompiWebCheckoutData copyWith({
+    int? amountInCents,
+    String? currency,
+    String? redirectUrl,
+    String? reference,
+    DateTime? expirationTime,
+    WompiWebCheckoutCustomerInfo? customerInfo,
+    WompiWebCheckoutShippingAddressInfo? shippingAddressInfo,
+  }) {
+    return WompiWebCheckoutData(
+      amountInCents: amountInCents ?? this.amountInCents,
+      currency: currency ?? this.currency,
+      redirectUrl: redirectUrl ?? this.redirectUrl,
+      reference: reference ?? this.reference,
+      expirationTime: expirationTime ?? this.expirationTime,
+      customerInfo: customerInfo ?? this.customerInfo,
+      shippingAddressInfo: shippingAddressInfo ?? this.shippingAddressInfo,
+    );
   }
 
   @override

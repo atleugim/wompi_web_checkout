@@ -1,3 +1,7 @@
+// ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'package:wompi_web_checkout/src/exceptions/wompi_exceptions.dart';
+import 'package:wompi_web_checkout/src/validators/validators.dart';
+
 /// Shipping address information for Wompi payments
 class WompiWebCheckoutShippingAddressInfo {
   /// Creates a new [WompiWebCheckoutShippingAddressInfo] instance with the
@@ -14,7 +18,7 @@ class WompiWebCheckoutShippingAddressInfo {
   /// - `addressLine2`: Secondary address data
   /// - `name`: Name of recipient
   /// - `postalCode`: Postal code
-  const WompiWebCheckoutShippingAddressInfo({
+  WompiWebCheckoutShippingAddressInfo({
     required this.addressLine1,
     required this.country,
     required this.region,
@@ -23,7 +27,42 @@ class WompiWebCheckoutShippingAddressInfo {
     this.addressLine2,
     this.name,
     this.postalCode,
-  });
+  }) {
+    if (addressLine1.isEmpty) {
+      throw WompiInvalidArgumentException(
+        'addressLine1',
+        description: 'Address line 1 cannot be empty',
+      );
+    }
+
+    if (country.isEmpty) {
+      throw WompiInvalidArgumentException(
+        'country',
+        description: 'Country cannot be empty',
+      );
+    }
+
+    if (region.isEmpty) {
+      throw WompiInvalidArgumentException(
+        'region',
+        description: 'Region cannot be empty',
+      );
+    }
+
+    if (city.isEmpty) {
+      throw WompiInvalidArgumentException(
+        'city',
+        description: 'City cannot be empty',
+      );
+    }
+
+    if (!WompiFieldValidator.isValidPhoneNumber(phoneNumber)) {
+      throw WompiInvalidArgumentException(
+        'phoneNumber',
+        description: 'Invalid phone number format',
+      );
+    }
+  }
 
   /// Primary address data
   ///
@@ -72,6 +111,30 @@ class WompiWebCheckoutShippingAddressInfo {
   /// For example:
   /// - 111111
   final String? postalCode;
+
+  /// Creates a copy of this [WompiWebCheckoutShippingAddressInfo] with the
+  /// given fields replaced with the new values.
+  WompiWebCheckoutShippingAddressInfo copyWith({
+    String? addressLine1,
+    String? addressLine2,
+    String? country,
+    String? region,
+    String? city,
+    String? name,
+    String? phoneNumber,
+    String? postalCode,
+  }) {
+    return WompiWebCheckoutShippingAddressInfo(
+      addressLine1: addressLine1 ?? this.addressLine1,
+      addressLine2: addressLine2 ?? this.addressLine2,
+      country: country ?? this.country,
+      region: region ?? this.region,
+      city: city ?? this.city,
+      name: name ?? this.name,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      postalCode: postalCode ?? this.postalCode,
+    );
+  }
 
   @override
   String toString() {

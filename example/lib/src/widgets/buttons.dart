@@ -79,7 +79,7 @@ class _WompiPaymentButtonsState extends State<WompiPaymentButtons> {
           amountInCents: 10000000,
           reference: cuid(),
           redirectUrl: 'https://example.com',
-          customerInfo: const WompiWebCheckoutCustomerInfo(
+          customerInfo: WompiWebCheckoutCustomerInfo(
             email: 'test@example.com',
             fullName: 'John Doe',
             phoneNumber: '3991111111',
@@ -103,14 +103,14 @@ class _WompiPaymentButtonsState extends State<WompiPaymentButtons> {
           reference: cuid(),
           redirectUrl: 'https://example.com',
           expirationTime: DateTime.now().add(const Duration(days: 1)),
-          customerInfo: const WompiWebCheckoutCustomerInfo(
+          customerInfo: WompiWebCheckoutCustomerInfo(
             email: 'test@example.com',
             fullName: 'John Doe',
             phoneNumber: '3991111111',
             legalId: '1234567890',
             legalIdType: WompiLegalId.cc,
           ),
-          shippingAddressInfo: const WompiWebCheckoutShippingAddressInfo(
+          shippingAddressInfo: WompiWebCheckoutShippingAddressInfo(
             addressLine1: 'Calle 100 # 100-100',
             country: 'CO',
             region: 'Antioquia',
