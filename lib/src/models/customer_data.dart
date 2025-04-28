@@ -1,5 +1,6 @@
+import 'package:wompi_web_checkout/src/exceptions/wompi_exceptions.dart';
 import 'package:wompi_web_checkout/src/models/enums.dart';
-import 'package:wompi_web_checkout/wompi_web_checkout.dart' show WompiLegalId;
+import 'package:wompi_web_checkout/src/validators/validators.dart';
 
 /// Customer information for Wompi payments
 class WompiWebCheckoutCustomerInfo {
@@ -11,13 +12,35 @@ class WompiWebCheckoutCustomerInfo {
   /// - `phoneNumber`: Payer's phone number
   /// - `legalId`: Payer's document number
   /// - `legalIdType`: Type of payer's document
-  const WompiWebCheckoutCustomerInfo({
+  WompiWebCheckoutCustomerInfo({
     this.email,
     this.fullName,
     this.phoneNumber,
     this.legalId,
     this.legalIdType,
-  });
+  }) {
+    if (email != null && !WompiFieldValidator.isValidEmail(email)) {
+      throw WompiInvalidArgumentException(
+        'email',
+        description: 'Invalid email format',
+      );
+    }
+
+    if (fullName != null && fullName!.isEmpty) {
+      throw WompiInvalidArgumentException(
+        'fullName',
+        description: 'Full name cannot be empty',
+      );
+    }
+
+    if (phoneNumber != null &&
+        !WompiFieldValidator.isValidPhoneNumber(phoneNumber)) {
+      throw WompiInvalidArgumentException(
+        'phoneNumber',
+        description: 'Invalid phone number format',
+      );
+    }
+  }
 
   /// Email to which the payment receipt is sent.
   ///
@@ -51,6 +74,24 @@ class WompiWebCheckoutCustomerInfo {
   /// Can use the [WompiLegalId.fromCode] method to convert a string to a
   /// [WompiLegalId]
   final WompiLegalId? legalIdType;
+
+  /// Creates a copy of this [WompiWebCheckoutCustomerInfo] with the given
+  /// fields replaced with the new values.
+  WompiWebCheckoutCustomerInfo copyWith({
+    String? email,
+    String? fullName,
+    String? phoneNumber,
+    String? legalId,
+    WompiLegalId? legalIdType,
+  }) {
+    return WompiWebCheckoutCustomerInfo(
+      email: email ?? this.email,
+      fullName: fullName ?? this.fullName,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      legalId: legalId ?? this.legalId,
+      legalIdType: legalIdType ?? this.legalIdType,
+    );
+  }
 
   @override
   String toString() {

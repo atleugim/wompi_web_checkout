@@ -1,6 +1,6 @@
 name: wompi_web_checkout
 description: "A Dart package that provides a seamless integration with Wompi's web checkout system, allowing you to easily implement payment processing in your Flutter applications."
-version: 1.0.0+1
+version: 1.1.0
 homepage: https://github.com/atleugim/wompi_web_checkout
 repository: https://github.com/atleugim/wompi_web_checkout.git
 
@@ -9,6 +9,8 @@ environment:
 
 dependencies:
   crypto: ^3.0.6
+  email_validator: ^3.0.0
 
 dev_dependencies:
+  test: ^1.25.15
   very_good_analysis: ^7.0.0
