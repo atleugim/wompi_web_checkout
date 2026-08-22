@@ -1,192 +1,263 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
-import 'package:wompi_web_checkout/src/exceptions/wompi_exceptions.dart';
+import 'package:meta/meta.dart';
+import 'package:wompi_web_checkout/src/exceptions/wompi_exception.dart';
 import 'package:wompi_web_checkout/src/models/customer_data.dart';
+import 'package:wompi_web_checkout/src/models/payment_method_references.dart';
 import 'package:wompi_web_checkout/src/models/shipping_address.dart';
+import 'package:wompi_web_checkout/src/models/taxes.dart';
+import 'package:wompi_web_checkout/src/models/wompi_language.dart';
+import 'package:wompi_web_checkout/src/utils/query_params.dart';
+import 'package:wompi_web_checkout/src/utils/validation_error_collector.dart';
+import 'package:wompi_web_checkout/src/utils/validators.dart';
 
-/// Payment data for Wompi checkout
-class WompiWebCheckoutData {
-  /// Creates a new [WompiWebCheckoutData] instance with the required payment
-  /// information.
+/// Payment data for a Wompi Web Checkout transaction.
+///
+/// Only [amountInCents] and [reference] are required; the optional
+/// fields pre-fill the checkout forms. The currency is not here: it
+/// comes from the merchant's country, set on `WompiWebCheckout`.
+///
+/// Every field is validated on creation, and a
+/// [WompiValidationException] reports **all** the problems found at
+/// once.
+@immutable
+final class WompiCheckoutData {
+  /// Creates a [WompiCheckoutData] instance with the payment information.
   ///
-  /// The `amountInCents`, `reference`, and `customerData` are required
-  /// parameters.
-  ///
-  /// Optional parameters include:
-  /// - `currency`: Defaults to 'COP' (Colombian Peso)
-  /// - `redirectUrl`: URL to redirect after payment completion
-  /// - `expirationTime`: Payment expiration date and time
-  /// - `shippingAddress`: Delivery address information
-  WompiWebCheckoutData({
+  /// Throws a [WompiValidationException] if any field is invalid.
+  WompiCheckoutData({
     required this.amountInCents,
     required this.reference,
-    this.customerInfo,
-    this.shippingAddressInfo,
-    this.currency = 'COP',
     this.redirectUrl,
-    this.expirationTime,
-  }) {
-    if (currency != 'COP') {
-      throw WompiInvalidArgumentException(
-        'currency',
-        description:
-            'Only COP (Colombian Peso) is currently supported for currency.',
-      );
-    }
+    DateTime? expirationTime,
+    this.customerData,
+    this.shippingAddress,
+    this.taxes,
+    this.paymentMethodReferences,
+    this.defaultLanguage,
+    this.collectShipping = false,
+    this.collectCustomerLegalId = false,
+  }) : expirationTime = _normalizeExpirationTime(expirationTime) {
+    final errors = ValidationErrorCollector();
 
     if (amountInCents <= 0) {
-      throw WompiInvalidArgumentException(
-        'amountInCents',
-        description: 'Amount in cents must be greater than 0.',
+      errors.add(
+        field: 'amountInCents',
+        message: 'Amount in cents must be greater than 0.',
+      );
+    }
+    if (reference.trim().isEmpty) {
+      errors.add(field: 'reference', message: 'Reference cannot be empty.');
+    } else if (!WompiValidators.isValidReference(reference)) {
+      errors.add(
+        field: 'reference',
+        message: 'Reference must be alphanumeric and may only include '
+            'dashes ("-") or underscores ("_").',
+      );
+    }
+    if (redirectUrl != null && !WompiValidators.isValidHttpUrl(redirectUrl!)) {
+      errors.add(
+        field: 'redirectUrl',
+        message: 'Redirect URL must be an absolute http(s) URL.',
       );
     }
 
-    if (amountInCents > 1000000000000) {
-      throw WompiInvalidArgumentException(
-        'amountInCents',
-        description:
-            'Amount in cents must be less than or equal to 1000000000000.',
-      );
-    }
-
-    if (reference.isEmpty) {
-      throw WompiInvalidArgumentException(
-        'reference',
-        description: 'Reference cannot be empty.',
-      );
-    }
-
-    if (expirationTime != null && expirationTime!.isBefore(DateTime.now())) {
-      throw WompiInvalidArgumentException(
-        'expirationTime',
-        description: 'Expiration time must be in the future.',
-      );
-    }
-
-    if (redirectUrl != null &&
-        (Uri.tryParse(redirectUrl!)?.hasScheme ?? false) == false) {
-      throw WompiInvalidArgumentException(
-        'redirectUrl',
-        description: 'Redirect URL must be a valid URL.',
-      );
-    }
+    errors.throwIfAny();
   }
 
-  /// Total amount in cents of the transaction.
+  /// Total amount of the transaction, **in cents**.
   ///
-  /// For example:
-  /// - For $1000 you write 100000
-  ///
-  /// The amount must be:
-  /// - Minimum: 1 cent
-  /// - Maximum: 1000000000000 cents
+  /// For example, to charge COP $49.500 use `4950000`.
   final int amountInCents;
 
-  /// Currency in which the transaction is to be made.
+  /// Unique payment reference in the merchant's system, alphanumeric and
+  /// optionally with dashes (`-`) or underscores (`_`).
   ///
-  /// Currently only supports Colombian Peso (COP).
-  final String currency;
-
-  /// URL to which the user is taken after making the payment.
-  ///
-  /// For example:
-  /// - https://mitienda.com.co/pago/resultado
-  final String? redirectUrl;
-
-  /// Unique reference in the database of each business.
-  ///
-  /// For example:
-  /// - TUPtdnVugyU40XlkhixhhGE6uYV2gh89
+  /// Once used for a payment, a reference cannot be used again.
   final String reference;
 
-  /// Date and time in ISO8601 format (UTC+0000), activates a countdown timer
-  /// indicating the time remaining until the expiration of the payment start
-  /// date.
+  /// URL to which the payer is redirected after completing the payment.
   ///
-  /// For example:
-  /// - 2023-06-09T20:28:50.000Z
+  /// Wompi appends the transaction `id` as a query parameter.
+  final String? redirectUrl;
+
+  /// Date and time at which the payment expires, activating a countdown
+  /// in the checkout.
+  ///
+  /// Stored in UTC with millisecond precision, the ISO 8601 format Wompi
+  /// expects (e.g. `2023-06-09T20:28:50.000Z`). It must be in the future
+  /// when the checkout URL is generated — the client checks that then,
+  /// not here, so checkout data stays safe to store and reuse.
   final DateTime? expirationTime;
 
-  /// Customer information for Wompi payments
-  final WompiWebCheckoutCustomerInfo? customerInfo;
+  /// Payer information used to pre-fill the checkout contact form.
+  final WompiCustomerData? customerData;
 
-  /// Shipping address information for Wompi payments
-  final WompiWebCheckoutShippingAddressInfo? shippingAddressInfo;
+  /// Shipping address information used to pre-fill the shipping form.
+  final WompiShippingAddress? shippingAddress;
 
-  /// Converts the payment data into a map of URL query parameters for Wompi
-  /// web checkout.
-  Map<String, String> getCheckoutQueryParams() {
-    final params = <String, String>{
-      'currency': currency,
-      'amount-in-cents': amountInCents.toString(),
-      'reference': reference,
-    };
+  /// Tax breakdown of the payment, in cents.
+  ///
+  /// Informational only: taxes must already be included in
+  /// [amountInCents]. Panama reports the ITBMS through [WompiTaxes.vat]
+  /// and rejects the consumption tax.
+  final WompiTaxes? taxes;
 
-    if (redirectUrl != null) {
-      params['redirect-url'] = redirectUrl!;
-    }
+  /// Extra references forwarded to the payment method.
+  ///
+  /// Colombia only.
+  final WompiPaymentMethodReferences? paymentMethodReferences;
 
-    if (expirationTime != null) {
-      params['expiration-time'] = expirationTime!.toIso8601String();
-    }
+  /// Language the checkout page is rendered in (`default-language`).
+  ///
+  /// Panama only. When omitted, Wompi picks its own default.
+  final WompiLanguage? defaultLanguage;
 
-    if (customerInfo != null) {
-      params.addAll({
-        if (customerInfo!.email != null)
-          'customer-data:email': customerInfo!.email!,
-        if (customerInfo!.fullName != null)
-          'customer-data:full-name': customerInfo!.fullName!,
-        if (customerInfo!.phoneNumber != null)
-          'customer-data:phone-number': customerInfo!.phoneNumber!,
-        if (customerInfo!.legalId != null)
-          'customer-data:legal-id': customerInfo!.legalId!,
-        if (customerInfo!.legalIdType != null)
-          'customer-data:legal-id-type': customerInfo!.legalIdType!.code,
-      });
-    }
+  /// Whether the checkout shows the shipping information view,
+  /// pre-filled with [shippingAddress] when it was provided.
+  final bool collectShipping;
 
-    if (shippingAddressInfo != null) {
-      params.addAll({
-        'shipping-address:address-line-1': shippingAddressInfo!.addressLine1,
-        'shipping-address:country': shippingAddressInfo!.country,
-        'shipping-address:region': shippingAddressInfo!.region,
-        'shipping-address:city': shippingAddressInfo!.city,
-        'shipping-address:phone-number': shippingAddressInfo!.phoneNumber,
-        if (shippingAddressInfo!.addressLine2 != null)
-          'shipping-address:address-line-2': shippingAddressInfo!.addressLine2!,
-        if (shippingAddressInfo!.name != null)
-          'shipping-address:name': shippingAddressInfo!.name!,
-        if (shippingAddressInfo!.postalCode != null)
-          'shipping-address:postal-code': shippingAddressInfo!.postalCode!,
-      });
-    }
+  /// Whether the checkout activates the identity document field,
+  /// pre-filled with [WompiCustomerData.legalId] when it was provided.
+  final bool collectCustomerLegalId;
 
-    return params;
+  /// Truncates [value] to UTC milliseconds: `DateTime.now()` carries
+  /// microseconds on the VM, which `toIso8601String` would emit as six
+  /// fractional digits — a format Wompi does not document.
+  static DateTime? _normalizeExpirationTime(DateTime? value) {
+    if (value == null) return null;
+    return DateTime.fromMillisecondsSinceEpoch(
+      value.millisecondsSinceEpoch,
+      isUtc: true,
+    );
   }
 
-  /// Creates a copy of this [WompiWebCheckoutData] with the given fields
-  /// replaced with the new values.
-  WompiWebCheckoutData copyWith({
+  /// The [Wompi query parameters](https://docs.wompi.co/docs/colombia/widget-checkout-web/#web-checkout)
+  /// for this payment data.
+  ///
+  /// Excludes `public-key`, `currency` and `signature:integrity`, which
+  /// the checkout client adds when building the final URL.
+  Map<String, String> toQueryParameters() {
+    return <String, String>{
+      'amount-in-cents': '$amountInCents',
+      'reference': reference,
+      if (redirectUrl != null) 'redirect-url': redirectUrl!,
+      if (expirationTime != null)
+        'expiration-time': expirationTime!.toIso8601String(),
+      if (defaultLanguage != null) 'default-language': defaultLanguage!.code,
+      if (collectShipping) 'collect-shipping': 'true',
+      if (collectCustomerLegalId) 'collect-customer-legal-id': 'true',
+      ...?customerData?.toQueryParams(),
+      ...?shippingAddress?.toQueryParams(),
+      ...?taxes?.toQueryParams(),
+      ...?paymentMethodReferences?.toQueryParams(),
+    };
+  }
+
+  /// Creates a copy with the given fields replaced.
+  ///
+  /// A `null` argument keeps the current value; use [clear] to remove an
+  /// optional field.
+  WompiCheckoutData copyWith({
     int? amountInCents,
-    String? currency,
-    String? redirectUrl,
     String? reference,
+    String? redirectUrl,
     DateTime? expirationTime,
-    WompiWebCheckoutCustomerInfo? customerInfo,
-    WompiWebCheckoutShippingAddressInfo? shippingAddressInfo,
+    WompiCustomerData? customerData,
+    WompiShippingAddress? shippingAddress,
+    WompiTaxes? taxes,
+    WompiPaymentMethodReferences? paymentMethodReferences,
+    WompiLanguage? defaultLanguage,
+    bool? collectShipping,
+    bool? collectCustomerLegalId,
   }) {
-    return WompiWebCheckoutData(
+    return WompiCheckoutData(
       amountInCents: amountInCents ?? this.amountInCents,
-      currency: currency ?? this.currency,
-      redirectUrl: redirectUrl ?? this.redirectUrl,
       reference: reference ?? this.reference,
+      redirectUrl: redirectUrl ?? this.redirectUrl,
       expirationTime: expirationTime ?? this.expirationTime,
-      customerInfo: customerInfo ?? this.customerInfo,
-      shippingAddressInfo: shippingAddressInfo ?? this.shippingAddressInfo,
+      customerData: customerData ?? this.customerData,
+      shippingAddress: shippingAddress ?? this.shippingAddress,
+      taxes: taxes ?? this.taxes,
+      paymentMethodReferences:
+          paymentMethodReferences ?? this.paymentMethodReferences,
+      defaultLanguage: defaultLanguage ?? this.defaultLanguage,
+      collectShipping: collectShipping ?? this.collectShipping,
+      collectCustomerLegalId:
+          collectCustomerLegalId ?? this.collectCustomerLegalId,
+    );
+  }
+
+  /// Creates a copy with the fields flagged `true` removed, which
+  /// [copyWith] cannot do:
+  ///
+  /// ```dart
+  /// final withoutExpiration = data.clear(expirationTime: true);
+  /// ```
+  WompiCheckoutData clear({
+    bool redirectUrl = false,
+    bool expirationTime = false,
+    bool customerData = false,
+    bool shippingAddress = false,
+    bool taxes = false,
+    bool paymentMethodReferences = false,
+    bool defaultLanguage = false,
+  }) {
+    return WompiCheckoutData(
+      amountInCents: amountInCents,
+      reference: reference,
+      redirectUrl: redirectUrl ? null : this.redirectUrl,
+      expirationTime: expirationTime ? null : this.expirationTime,
+      customerData: customerData ? null : this.customerData,
+      shippingAddress: shippingAddress ? null : this.shippingAddress,
+      taxes: taxes ? null : this.taxes,
+      paymentMethodReferences:
+          paymentMethodReferences ? null : this.paymentMethodReferences,
+      defaultLanguage: defaultLanguage ? null : this.defaultLanguage,
+      collectShipping: collectShipping,
+      collectCustomerLegalId: collectCustomerLegalId,
     );
   }
 
   @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is WompiCheckoutData &&
+          runtimeType == other.runtimeType &&
+          amountInCents == other.amountInCents &&
+          reference == other.reference &&
+          redirectUrl == other.redirectUrl &&
+          expirationTime == other.expirationTime &&
+          customerData == other.customerData &&
+          shippingAddress == other.shippingAddress &&
+          taxes == other.taxes &&
+          paymentMethodReferences == other.paymentMethodReferences &&
+          defaultLanguage == other.defaultLanguage &&
+          collectShipping == other.collectShipping &&
+          collectCustomerLegalId == other.collectCustomerLegalId;
+
+  @override
+  int get hashCode => Object.hash(
+        amountInCents,
+        reference,
+        redirectUrl,
+        expirationTime,
+        customerData,
+        shippingAddress,
+        taxes,
+        paymentMethodReferences,
+        defaultLanguage,
+        collectShipping,
+        collectCustomerLegalId,
+      );
+
+  @override
   String toString() {
-    return '''WompiPaymentData(currency: $currency, amountInCents: $amountInCents, reference: $reference, redirectUrl: $redirectUrl, expirationTime: $expirationTime, customerData: $customerInfo, shippingAddress: $shippingAddressInfo)''';
+    return 'WompiCheckoutData(amountInCents: $amountInCents, '
+        'reference: $reference, redirectUrl: $redirectUrl, '
+        'expirationTime: $expirationTime, customerData: $customerData, '
+        'shippingAddress: $shippingAddress, taxes: $taxes, '
+        'paymentMethodReferences: $paymentMethodReferences, '
+        'defaultLanguage: $defaultLanguage, '
+        'collectShipping: $collectShipping, '
+        'collectCustomerLegalId: $collectCustomerLegalId)';
   }
 }

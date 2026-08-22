@@ -1,6 +1,36 @@
-export 'src/exceptions/wompi_exceptions.dart';
+/// A pure Dart client for the Wompi **Web Checkout**.
+///
+/// Build integrity-signed checkout URLs and let your customers complete
+/// their payments on Wompi's hosted checkout page, from any Dart or
+/// Flutter application.
+///
+/// ```dart
+/// import 'package:wompi_web_checkout/wompi_web_checkout.dart';
+///
+/// final wompi = WompiWebCheckout(
+///   publicKey: 'pub_test_...',
+///   integrityKey: 'test_integrity_...',
+/// );
+///
+/// final uri = wompi.getCheckoutUri(
+///   WompiCheckoutData(
+///     amountInCents: 4950000,
+///     reference: 'order-123',
+///     redirectUrl: 'https://mystore.com/payments/result',
+///   ),
+/// );
+/// ```
+library;
+
+export 'src/exceptions/wompi_exception.dart';
 export 'src/models/checkout_data.dart';
 export 'src/models/customer_data.dart';
-export 'src/models/enums.dart';
+export 'src/models/legal_id_type.dart';
+export 'src/models/payment_method_references.dart';
 export 'src/models/shipping_address.dart';
+export 'src/models/taxes.dart';
+export 'src/models/wompi_country.dart';
+export 'src/models/wompi_currency.dart';
+export 'src/models/wompi_environment.dart';
+export 'src/models/wompi_language.dart';
 export 'src/wompi_web_checkout.dart';
