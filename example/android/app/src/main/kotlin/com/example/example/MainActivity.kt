@@ -1,4 +1,4 @@
-package dev.atleugim.example
+package com.example.example
 
 import io.flutter.embedding.android.FlutterActivity
 

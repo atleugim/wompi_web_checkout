@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
@@ -20,31 +21,34 @@ class _PaymentWebviewState extends State<PaymentWebview> {
   void initState() {
     super.initState();
     log('URL: ${widget.url}', name: 'PaymentWebview');
-    controller =
-        WebViewController()
-          ..setJavaScriptMode(JavaScriptMode.unrestricted)
-          ..setBackgroundColor(Colors.white)
-          ..setNavigationDelegate(
-            NavigationDelegate(
-              onWebResourceError: (WebResourceError error) {
-                log('Error: ${error.url}', name: 'PaymentWebview');
-                log('Error: ${error.description}', name: 'PaymentWebview');
-              },
-              onNavigationRequest: (NavigationRequest request) {
-                if (widget.redirectUrl != null) {
-                  final redirectUrl = Uri.parse(widget.redirectUrl!);
-                  final requestUrl = Uri.parse(request.url);
+    controller = WebViewController();
+    unawaited(_setupController());
+  }
 
-                  if (requestUrl.host == redirectUrl.host) {
-                    Navigator.of(context).pop(true);
-                    return NavigationDecision.prevent;
-                  }
-                }
-                return NavigationDecision.navigate;
-              },
-            ),
-          )
-          ..loadRequest(widget.url);
+  Future<void> _setupController() async {
+    await controller.setJavaScriptMode(JavaScriptMode.unrestricted);
+    await controller.setBackgroundColor(Colors.white);
+    await controller.setNavigationDelegate(
+      NavigationDelegate(
+        onWebResourceError: (error) {
+          log('Error: ${error.url}', name: 'PaymentWebview');
+          log('Error: ${error.description}', name: 'PaymentWebview');
+        },
+        onNavigationRequest: (request) {
+          if (widget.redirectUrl != null) {
+            final redirectUrl = Uri.parse(widget.redirectUrl!);
+            final requestUrl = Uri.parse(request.url);
+
+            if (requestUrl.host == redirectUrl.host) {
+              Navigator.of(context).pop(true);
+              return NavigationDecision.prevent;
+            }
+          }
+          return NavigationDecision.navigate;
+        },
+      ),
+    );
+    await controller.loadRequest(widget.url);
   }
 
   @override

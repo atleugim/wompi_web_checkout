@@ -1,3 +1,54 @@
+## 2.0.0
+
+Full overhaul: leaner API, richer validation, and Panama support.
+
+### Breaking changes
+
+- Renamed: `WompiWebCheckoutData` → `WompiCheckoutData`,
+  `WompiWebCheckoutCustomerInfo` → `WompiCustomerData` (field
+  `customerInfo` → `customerData`), `WompiWebCheckoutShippingAddressInfo`
+  → `WompiShippingAddress` (field `shippingAddressInfo` →
+  `shippingAddress`), `WompiLegalId` → `WompiLegalIdType`.
+- Removed `WompiCheckoutData.currency`: it is derived from
+  `WompiWebCheckout.country`.
+- The three `WompiInvalid*Exception` types were replaced by a single
+  `WompiValidationException` that aggregates every error in `errors`.
+- `getCheckoutUri` is now synchronous.
+- `WompiWebCheckout.integrityKey` is no longer publicly readable.
+- `expirationTime` is validated by `getCheckoutUri`, not by the
+  constructor.
+- Stricter `reference` and phone number validation, per the docs.
+- Requires Dart SDK >= 3.0.0; dropped the `email_validator` dependency.
+
+### Added
+
+- **Panama support** through the new `WompiCountry` enum, which selects
+  the checkout host, the currency (`WompiCurrency`), the accepted
+  `legalIdTypes` and which optional parameters may be sent.
+- Parameters missing from 1.x: `WompiTaxes`, `phoneNumberPrefix`,
+  `collectShipping`, `collectCustomerLegalId`, `WompiLanguage` /
+  `defaultLanguage` and `WompiPaymentMethodReferences`.
+- `WompiEnvironment`, derived from the public key prefix, plus key format
+  validation and a console warning when production credentials run in a
+  debug build.
+- Cross-field validation (`phoneNumber`/`phoneNumberPrefix`,
+  `legalId`/`legalIdType`).
+- `clear` on every model, to remove optional fields that `copyWith`
+  cannot.
+- Value equality on all models.
+
+### Fixed
+
+- `expirationTime` is normalized to UTC milliseconds, the format Wompi
+  documents — `DateTime.now()` would otherwise emit microseconds in both
+  the URL and the signature.
+- `WompiLegalIdType.fromCode` previously threw for every valid code; a
+  nullable `tryFromCode` was added.
+- `WompiValidationException` rejects an empty error list with an
+  `ArgumentError` instead of an `assert`.
+- The production-credentials warning no longer fires in Flutter profile
+  builds.
+
 ## 1.1.0
 
 - Implemented customer info validation
