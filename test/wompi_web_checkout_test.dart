@@ -11,16 +11,16 @@ void main() {
   late WompiWebCheckout wompi;
 
   setUp(() {
-    wompi = WompiWebCheckout(
+    wompi = WompiWebCheckout.fromClient(
       publicKey: publicKey,
       integrityKey: integrityKey,
     );
   });
 
-  group('WompiWebCheckout constructor', () {
+  group('WompiWebCheckout.fromClient', () {
     test('creates an instance with valid keys', () {
       expect(
-        WompiWebCheckout(
+        WompiWebCheckout.fromClient(
           publicKey: publicKey,
           integrityKey: integrityKey,
         ),
@@ -28,9 +28,51 @@ void main() {
       );
     });
 
+    test('drops whitespace around the keys', () {
+      // A newline from an .env file or a dashboard copy-paste must not
+      // reach the URL, nor the hash the signature is built from.
+      final padded = WompiWebCheckout.fromClient(
+        publicKey: '  $publicKey\n',
+        integrityKey: '\t$integrityKey  ',
+      );
+
+      final data = WompiCheckoutData(
+        amountInCents: 10000,
+        reference: 'ref_123',
+      );
+
+      expect(padded.publicKey, publicKey);
+      expect(
+        padded.getCheckoutUri(data).queryParameters['public-key'],
+        publicKey,
+      );
+      // Same signature as the unpadded client: the secret was trimmed
+      // before hashing, not after.
+      expect(
+        padded.getCheckoutUri(data).queryParameters['signature:integrity'],
+        wompi.getCheckoutUri(data).queryParameters['signature:integrity'],
+      );
+    });
+
+    test('throws when the keys are only whitespace', () {
+      expect(
+        () => WompiWebCheckout.fromClient(
+          publicKey: '   ',
+          integrityKey: '\n',
+        ),
+        throwsA(
+          isA<WompiValidationException>().having(
+            (e) => e.errors.map((e) => e.message),
+            'messages',
+            everyElement(contains('cannot be empty')),
+          ),
+        ),
+      );
+    });
+
     test('throws when the public key is empty', () {
       expect(
-        () => WompiWebCheckout(
+        () => WompiWebCheckout.fromClient(
           publicKey: '',
           integrityKey: integrityKey,
         ),
@@ -46,7 +88,7 @@ void main() {
 
     test('throws when the integrity key is empty', () {
       expect(
-        () => WompiWebCheckout(
+        () => WompiWebCheckout.fromClient(
           publicKey: publicKey,
           integrityKey: '',
         ),
@@ -62,7 +104,7 @@ void main() {
 
     test('reports both keys at once when both are empty', () {
       expect(
-        () => WompiWebCheckout(publicKey: '', integrityKey: ''),
+        () => WompiWebCheckout.fromClient(publicKey: '', integrityKey: ''),
         throwsA(
           isA<WompiValidationException>().having(
             (e) => e.errors.length,
@@ -75,7 +117,7 @@ void main() {
 
     test('throws when the public key has an unrecognized format', () {
       expect(
-        () => WompiWebCheckout(
+        () => WompiWebCheckout.fromClient(
           publicKey: 'pub_staging_123',
           integrityKey: integrityKey,
         ),
@@ -91,7 +133,7 @@ void main() {
 
     test('throws when the integrity key has an unrecognized format', () {
       expect(
-        () => WompiWebCheckout(
+        () => WompiWebCheckout.fromClient(
           publicKey: publicKey,
           integrityKey: 'some_secret_123',
         ),
@@ -112,7 +154,7 @@ void main() {
     });
 
     test('is production for pub_prod_ keys', () {
-      final prodWompi = WompiWebCheckout(
+      final prodWompi = WompiWebCheckout.fromClient(
         publicKey: 'pub_prod_Kw4aC0rZVgLZQn209NbEKPuXLzBD28Zx',
         integrityKey: 'prod_integrity_Z5mMke9x0k8gpErbDqwrJXMqsI6SFli6',
       );
@@ -133,7 +175,7 @@ void main() {
     });
 
     test('points to the Panamanian host when the country is Panama', () {
-      final panamaWompi = WompiWebCheckout(
+      final panamaWompi = WompiWebCheckout.fromClient(
         publicKey: publicKey,
         integrityKey: integrityKey,
         country: WompiCountry.panama,
@@ -157,7 +199,7 @@ void main() {
     });
 
     test('derives the currency from the country', () {
-      final panamaWompi = WompiWebCheckout(
+      final panamaWompi = WompiWebCheckout.fromClient(
         publicKey: publicKey,
         integrityKey: integrityKey,
         country: WompiCountry.panama,
@@ -176,7 +218,7 @@ void main() {
     });
 
     test('rejects the consumption tax for Panama', () {
-      final panamaWompi = WompiWebCheckout(
+      final panamaWompi = WompiWebCheckout.fromClient(
         publicKey: publicKey,
         integrityKey: integrityKey,
         country: WompiCountry.panama,
@@ -201,7 +243,7 @@ void main() {
     });
 
     test('accepts the ITBMS reported through the VAT field in Panama', () {
-      final panamaWompi = WompiWebCheckout(
+      final panamaWompi = WompiWebCheckout.fromClient(
         publicKey: publicKey,
         integrityKey: integrityKey,
         country: WompiCountry.panama,
@@ -250,7 +292,7 @@ void main() {
     });
 
     test('throws when the legal ID type does not match the country', () {
-      final panamaWompi = WompiWebCheckout(
+      final panamaWompi = WompiWebCheckout.fromClient(
         publicKey: publicKey,
         integrityKey: integrityKey,
         country: WompiCountry.panama,
@@ -278,7 +320,7 @@ void main() {
     });
 
     test('accepts a legal ID type that matches the country', () {
-      final panamaWompi = WompiWebCheckout(
+      final panamaWompi = WompiWebCheckout.fromClient(
         publicKey: publicKey,
         integrityKey: integrityKey,
         country: WompiCountry.panama,
@@ -340,7 +382,7 @@ void main() {
         () {
       // Golden test vector taken from the official Wompi documentation:
       // https://docs.wompi.co/docs/colombia/widget-checkout-web/
-      final docsWompi = WompiWebCheckout(
+      final docsWompi = WompiWebCheckout.fromClient(
         publicKey: publicKey,
         integrityKey: 'prod_integrity_Z5mMke9x0k8gpErbDqwrJXMqsI6SFli6',
       );
@@ -381,7 +423,7 @@ void main() {
     });
 
     test('signs USD transactions for Panama', () {
-      final panamaWompi = WompiWebCheckout(
+      final panamaWompi = WompiWebCheckout.fromClient(
         publicKey: publicKey,
         integrityKey: integrityKey,
         country: WompiCountry.panama,
@@ -434,7 +476,7 @@ void main() {
     test('generates the Panamanian signature for the docs example values', () {
       // The Panama docs publish the Colombian hash for their USD
       // example, which is wrong. This is the real one.
-      final docsWompi = WompiWebCheckout(
+      final docsWompi = WompiWebCheckout.fromClient(
         publicKey: publicKey,
         integrityKey: 'prod_integrity_Z5mMke9x0k8gpErbDqwrJXMqsI6SFli6',
         country: WompiCountry.panama,
@@ -545,7 +587,7 @@ void main() {
     });
 
     test('sends the checkout language for Panama', () {
-      final panamaWompi = WompiWebCheckout(
+      final panamaWompi = WompiWebCheckout.fromClient(
         publicKey: publicKey,
         integrityKey: integrityKey,
         country: WompiCountry.panama,
@@ -582,7 +624,7 @@ void main() {
     });
 
     test('aggregates every country mismatch at once', () {
-      final panamaWompi = WompiWebCheckout(
+      final panamaWompi = WompiWebCheckout.fromClient(
         publicKey: publicKey,
         integrityKey: integrityKey,
         country: WompiCountry.panama,
@@ -621,7 +663,7 @@ void main() {
     });
 
     test('rejects payment method references for Panama', () {
-      final panamaWompi = WompiWebCheckout(
+      final panamaWompi = WompiWebCheckout.fromClient(
         publicKey: publicKey,
         integrityKey: integrityKey,
         country: WompiCountry.panama,
@@ -649,7 +691,7 @@ void main() {
 
     test('sends the parameters shared by both countries to Panama', () {
       // Everything not gated per country must go through unchanged.
-      final panamaWompi = WompiWebCheckout(
+      final panamaWompi = WompiWebCheckout.fromClient(
         publicKey: publicKey,
         integrityKey: integrityKey,
         country: WompiCountry.panama,
@@ -708,6 +750,275 @@ void main() {
       expect(uri.queryParameters.containsKey('collect-shipping'), isFalse);
       expect(
         uri.queryParameters.containsKey('collect-customer-legal-id'),
+        isFalse,
+      );
+    });
+  });
+
+  group('WompiWebCheckout.fromServer', () {
+    // A real SHA-256 digest, as a backend would return it.
+    const signature =
+        '37c8407747e595535433ef8f6a811d853cd943046624a0ec04662b17bbf33bf5';
+
+    test('creates an instance with a valid public key and signature', () {
+      expect(
+        WompiWebCheckout.fromServer(
+          publicKey: publicKey,
+          integritySignature: signature,
+        ),
+        isA<WompiWebCheckout>(),
+      );
+    });
+
+    test('puts the backend signature in the URL untouched', () {
+      final serverWompi = WompiWebCheckout.fromServer(
+        publicKey: publicKey,
+        integritySignature: signature,
+      );
+
+      final uri = serverWompi.getCheckoutUri(
+        WompiCheckoutData(amountInCents: 2490000, reference: 'order-123'),
+      );
+
+      expect(uri.queryParameters['signature:integrity'], signature);
+      expect(uri.queryParameters['public-key'], publicKey);
+      expect(uri.queryParameters['currency'], 'COP');
+      expect(uri.queryParameters['amount-in-cents'], '2490000');
+    });
+
+    test('reproduces the signature of the docs example', () {
+      // Same golden vector as the local signer, but handed over instead
+      // of computed: both paths must produce the same URL.
+      final data = WompiCheckoutData(
+        amountInCents: 2490000,
+        reference: 'sk8-438k4-xmxm392-sn2m',
+      );
+
+      final localUri = WompiWebCheckout.fromClient(
+        publicKey: publicKey,
+        integrityKey: 'prod_integrity_Z5mMke9x0k8gpErbDqwrJXMqsI6SFli6',
+      ).getCheckoutUri(data);
+
+      final serverUri = WompiWebCheckout.fromServer(
+        publicKey: publicKey,
+        integritySignature: signature,
+      ).getCheckoutUri(data);
+
+      expect(serverUri, localUri);
+    });
+
+    test('honors the country for the host and the currency', () {
+      final panamaWompi = WompiWebCheckout.fromServer(
+        publicKey: publicKey,
+        integritySignature: signature,
+        country: WompiCountry.panama,
+      );
+
+      final uri = panamaWompi.getCheckoutUri(
+        WompiCheckoutData(amountInCents: 9500, reference: 'ref_123'),
+      );
+
+      expect(uri.host, 'checkout.wompi.pa');
+      expect(uri.queryParameters['currency'], 'USD');
+      expect(uri.queryParameters['signature:integrity'], signature);
+    });
+
+    test('still validates the checkout data against the country', () {
+      final panamaWompi = WompiWebCheckout.fromServer(
+        publicKey: publicKey,
+        integritySignature: signature,
+        country: WompiCountry.panama,
+      );
+
+      expect(
+        () => panamaWompi.getCheckoutUri(
+          WompiCheckoutData(
+            amountInCents: 10000,
+            reference: 'ref_123',
+            taxes: WompiTaxes(consumption: 800),
+          ),
+        ),
+        throwsA(
+          isA<WompiValidationException>().having(
+            (e) => e.errors.single.field,
+            'field',
+            'taxes.consumption',
+          ),
+        ),
+      );
+    });
+
+    test('never asks for the integrity secret', () {
+      // The whole point: no secret is available to leak.
+      final serverWompi = WompiWebCheckout.fromServer(
+        publicKey: publicKey,
+        integritySignature: signature,
+      );
+
+      final uri = serverWompi.getCheckoutUri(
+        WompiCheckoutData(amountInCents: 10000, reference: 'ref_123'),
+      );
+
+      expect(uri.toString(), isNot(contains(integrityKey)));
+      expect(serverWompi.toString(), isNot(contains(integrityKey)));
+    });
+
+    test('sends the normalized expiration time the backend must sign', () {
+      // The riskiest part of this flow: the app and the backend have to
+      // hash the very same string. A local DateTime with microseconds
+      // still reaches the URL as UTC milliseconds.
+      final local = DateTime.now().add(const Duration(days: 1));
+      final data = WompiCheckoutData(
+        amountInCents: 2490000,
+        reference: 'ref_123',
+        expirationTime: local,
+      );
+
+      final uri = WompiWebCheckout.fromServer(
+        publicKey: publicKey,
+        integritySignature: signature,
+      ).getCheckoutUri(data);
+
+      expect(
+        uri.queryParameters['expiration-time'],
+        data.expirationTime!.toIso8601String(),
+      );
+      expect(
+        RegExp(r'\.\d{3}Z$').hasMatch(
+          uri.queryParameters['expiration-time']!,
+        ),
+        isTrue,
+      );
+      // Unlike fromClient, the signature is not recomputed from it.
+      expect(uri.queryParameters['signature:integrity'], signature);
+    });
+
+    test('drops whitespace around the signature', () {
+      // A digest read from an HTTP body often carries a newline.
+      final uri = WompiWebCheckout.fromServer(
+        publicKey: publicKey,
+        integritySignature: '  $signature\n',
+      ).getCheckoutUri(
+        WompiCheckoutData(amountInCents: 10000, reference: 'ref_123'),
+      );
+
+      expect(uri.queryParameters['signature:integrity'], signature);
+    });
+
+    test('throws when the signature is only whitespace', () {
+      expect(
+        () => WompiWebCheckout.fromServer(
+          publicKey: publicKey,
+          integritySignature: '   ',
+        ),
+        throwsA(
+          isA<WompiValidationException>().having(
+            (e) => e.errors.single.message,
+            'message',
+            contains('cannot be empty'),
+          ),
+        ),
+      );
+    });
+
+    test('throws when the signature is empty', () {
+      expect(
+        () => WompiWebCheckout.fromServer(
+          publicKey: publicKey,
+          integritySignature: '',
+        ),
+        throwsA(
+          isA<WompiValidationException>().having(
+            (e) => e.errors.single.field,
+            'field',
+            'integritySignature',
+          ),
+        ),
+      );
+    });
+
+    test('throws when the signature is not a SHA-256 hash', () {
+      for (final invalid in <String>[
+        'not-a-hash',
+        // 63 characters.
+        '37c8407747e595535433ef8f6a811d853cd943046624a0ec04662b17bbf33bf',
+        // 65 characters.
+        '37c8407747e595535433ef8f6a811d853cd943046624a0ec04662b17bbf33bf55',
+        // Non-hexadecimal character.
+        '37c8407747e595535433ef8f6a811d853cd943046624a0ec04662b17bbf33bfz',
+      ]) {
+        expect(
+          () => WompiWebCheckout.fromServer(
+            publicKey: publicKey,
+            integritySignature: invalid,
+          ),
+          throwsA(
+            isA<WompiValidationException>().having(
+              (e) => e.errors.single.field,
+              'field',
+              'integritySignature',
+            ),
+          ),
+          reason: '"$invalid" must be rejected',
+        );
+      }
+    });
+
+    test('accepts an uppercase hexadecimal signature', () {
+      expect(
+        WompiWebCheckout.fromServer(
+          publicKey: publicKey,
+          integritySignature: signature.toUpperCase(),
+        )
+            .getCheckoutUri(
+              WompiCheckoutData(amountInCents: 10000, reference: 'ref_123'),
+            )
+            .queryParameters['signature:integrity'],
+        signature.toUpperCase(),
+      );
+    });
+
+    test('reports the public key and the signature at once', () {
+      expect(
+        () => WompiWebCheckout.fromServer(
+          publicKey: '',
+          integritySignature: '',
+        ),
+        throwsA(
+          isA<WompiValidationException>().having(
+            (e) => e.errors.map((e) => e.field),
+            'fields',
+            containsAll(<String>['publicKey', 'integritySignature']),
+          ),
+        ),
+      );
+    });
+
+    test('derives the environment from the public key', () {
+      expect(
+        WompiWebCheckout.fromServer(
+          publicKey: 'pub_prod_Kw4aC0rZVgLZQn209NbEKPuXLzBD28Zx',
+          integritySignature: signature,
+        ).environment,
+        WompiEnvironment.production,
+      );
+    });
+  });
+
+  group('WompiWebCheckout.signsLocally', () {
+    const signature =
+        '37c8407747e595535433ef8f6a811d853cd943046624a0ec04662b17bbf33bf5';
+
+    test('is true for a client that holds the integrity secret', () {
+      expect(wompi.signsLocally, isTrue);
+    });
+
+    test('is false for a client signed by the backend', () {
+      expect(
+        WompiWebCheckout.fromServer(
+          publicKey: publicKey,
+          integritySignature: signature,
+        ).signsLocally,
         isFalse,
       );
     });

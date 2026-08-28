@@ -5,8 +5,10 @@ import 'package:wompi_webview_example/src/screens/payments_screen.dart';
 /// Asks for the merchant credentials and country, then builds the
 /// [WompiWebCheckout] client used by the rest of the example.
 ///
-/// Nothing is persisted: the keys live only for the session, so no
-/// credential is ever committed to this repository.
+/// This screen uses [WompiWebCheckout.fromClient], which keeps the
+/// integrity secret in the app, since the example has no backend of its
+/// own. With one, [WompiWebCheckout.fromServer] takes the signature the
+/// backend computed and the secret stays there.
 class SetupScreen extends StatefulWidget {
   const SetupScreen({super.key});
 
@@ -42,7 +44,7 @@ class _SetupScreenState extends State<SetupScreen> {
     });
 
     try {
-      final checkout = WompiWebCheckout(
+      final checkout = WompiWebCheckout.fromClient(
         publicKey: _publicKeyController.text.trim(),
         integrityKey: _integrityKeyController.text.trim(),
         country: _country,
@@ -85,6 +87,15 @@ class _SetupScreenState extends State<SetupScreen> {
                 '(Developers > Secrets for technical integration). Use '
                 'sandbox keys so no real money moves.',
                 style: theme.textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'This demo signs in the app '
+                '(WompiWebCheckout.fromClient), as it has no backend. '
+                'With one, WompiWebCheckout.fromServer takes the '
+                'signature your backend computed and the secret stays '
+                'there.',
+                style: theme.textTheme.bodySmall,
               ),
               const SizedBox(height: 24),
               TextField(
