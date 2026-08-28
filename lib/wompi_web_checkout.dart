@@ -7,7 +7,15 @@
 /// ```dart
 /// import 'package:wompi_web_checkout/wompi_web_checkout.dart';
 ///
-/// final wompi = WompiWebCheckout(
+/// // Your backend signs the payment, so the integrity secret never
+/// // reaches the app. Preferable for security.
+/// final wompi = WompiWebCheckout.fromServer(
+///   publicKey: 'pub_test_...',
+///   integritySignature: '<SIGNATURE_FROM_YOUR_BACKEND>',
+/// );
+///
+/// // Or the app holds the secret and signs on its own:
+/// final wompi = WompiWebCheckout.fromClient(
 ///   publicKey: 'pub_test_...',
 ///   integrityKey: 'test_integrity_...',
 /// );

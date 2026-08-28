@@ -1,3 +1,38 @@
+## 3.0.0
+
+Adds a way to keep the integrity secret out of the app, which is what
+[Wompi recommends](https://docs.wompi.co/docs/colombia/widget-checkout-web/#paso-3-genera-una-firma-de-integridad).
+
+### Breaking changes
+
+- The unnamed `WompiWebCheckout(...)` constructor was removed: a client
+  is now built with `WompiWebCheckout.fromServer` or
+  `WompiWebCheckout.fromClient`. Replacing
+  `WompiWebCheckout(publicKey: ..., integrityKey: ...)` with
+  `WompiWebCheckout.fromClient(publicKey: ..., integrityKey: ...)` keeps
+  the previous behavior unchanged.
+
+### Added
+
+- `WompiWebCheckout.fromServer`, which takes the `integritySignature`
+  computed by the merchant's backend, so the integrity secret never
+  reaches the client. The signature is validated as a SHA-256 digest
+  (64 hexadecimal characters) and reported through the
+  `integritySignature` field of `WompiValidationException`.
+- `WompiWebCheckout.fromClient`, the explicit name for the previous
+  behavior: the app holds the secret and hashes locally.
+- `WompiWebCheckout.signsLocally`, `true` only for clients built with
+  `fromClient`.
+
+### Fixed
+
+- Surrounding whitespace is dropped from the public key, the integrity
+  key and the integrity signature. A trailing newline — from an `.env`
+  file, an HTTP body or a dashboard copy-paste — used to reach the
+  checkout URL percent-encoded, and to be hashed into the signature,
+  producing a URL Wompi rejects for no visible reason. A value that is
+  only whitespace is still reported as empty.
+
 ## 2.0.0
 
 Full overhaul: leaner API, richer validation, and Panama support.

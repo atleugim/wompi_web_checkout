@@ -1,6 +1,6 @@
 name: wompi_web_checkout
 description: A pure Dart client for Wompi's Web Checkout. Build integrity-signed checkout URLs and accept payments in your Dart or Flutter apps.
-version: 2.0.0
+version: 3.0.0
 homepage: https://github.com/atleugim/wompi_web_checkout
 repository: https://github.com/atleugim/wompi_web_checkout.git
 topics:
